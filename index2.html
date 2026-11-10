@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YouTube チャンネル検索ツール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#f6f2ea; --card:rgba(255,253,248,.88); --line:#dfdbe6;
+    --text:#3b4658; --muted:#7d8697;
+    --water:#6f8fb3; --water-d:#5a7799; --lavender:#a99fcf; --sage:#8fae96; --sage-l:#eaf2ea;
+    --rose:#d8a9b1; --rose-l:#f6e8ea; --mist:#eef1f7;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:"Noto Sans JP",-apple-system,"Hiragino Sans",sans-serif;font-size:14px;color:var(--text);
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(169,159,207,.28), transparent 60%),
+      radial-gradient(900px 500px at 95% 0%, rgba(143,174,150,.25), transparent 60%),
+      radial-gradient(800px 600px at 50% 110%, rgba(216,169,177,.22), transparent 60%),
+      var(--cream);
+    background-attachment:fixed;min-height:100vh;
+  }
+  header{
+    padding:22px 28px;
+    background:linear-gradient(115deg,#b9cbe2 0%,#cbc4e6 35%,#d9e6d2 70%,#f0d9db 100%);
+    border-bottom:1px solid rgba(255,255,255,.6);
+    display:flex;align-items:center;gap:12px;
+  }
+  header h1{font-family:"Zen Maru Gothic",sans-serif;font-size:20px;margin:0;color:#3a4a63;letter-spacing:.04em}
+  header .lily{width:28px;height:28px}
+  header .sub{font-size:12px;color:#55637a;margin-left:auto}
+  main{max-width:1400px;margin:0 auto;padding:22px 28px}
+  .card{background:var(--card);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:18px;box-shadow:0 6px 24px rgba(111,143,179,.08)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 18px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
+  input[type=text],input[type=number],input[type=password],select{
+    width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fffefb;color:var(--text);font-family:inherit;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:focus,select:focus{outline:none;border-color:var(--lavender);box-shadow:0 0 0 3px rgba(169,159,207,.22)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  button{padding:9px 18px;border-radius:999px;border:1px solid var(--line);background:#fffefb;color:var(--text);cursor:pointer;font-size:14px;font-family:inherit;transition:background .15s}
+  button:hover{background:var(--mist)}
+  button.primary{background:linear-gradient(120deg,var(--water),var(--lavender));border:none;color:#fff;font-weight:700;padding:10px 28px;letter-spacing:.05em;box-shadow:0 4px 14px rgba(111,143,179,.3)}
+  button.primary:hover{filter:brightness(1.05)}
+  button:disabled{opacity:.5;cursor:default}
+  .hint{font-size:12px;color:var(--muted)}
+  .status{margin-top:12px;font-size:13px;color:var(--water-d)}
+  .status.err{color:#b56a78}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+  .toolbar select{width:auto}
+  .tablewrap{overflow:auto;max-height:75vh;border:1px solid var(--line);border-radius:12px;background:#fffefb}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:11px 12px;border-bottom:1px solid #ece9f0;vertical-align:top;text-align:left}
+  th{font-size:12px;color:#5d6880;font-weight:700;background:linear-gradient(180deg,#f1eff8,#ecf0f6);position:sticky;top:0;z-index:1;white-space:nowrap}
+  th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+  th.sortable:hover{color:var(--water-d)}
+  tbody tr:hover{background:#faf8fc}
+  td.avatar img{width:48px;height:48px;border-radius:50%;display:block;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+  td.name a{font-weight:700;color:var(--text);text-decoration:none}
+  td.name a:hover{color:var(--water-d);text-decoration:underline}
+  td.name .handle{font-size:12px;color:var(--muted);margin-top:2px}
+  td.subs{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700;color:var(--water-d)}
+  td.subs .sub2{font-size:12px;color:var(--muted);font-weight:400}
+  td.desc{max-width:380px;color:#4c5668}
+  .clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;cursor:pointer}
+  .clamp.open{-webkit-line-clamp:unset}
+  td.contact{max-width:240px;font-size:13px;word-break:break-all}
+  td.contact div{margin-bottom:4px}
+  td.contact .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--rose-l);color:#a06f79;margin-right:5px}
+  td.contact a{color:var(--water-d);text-decoration:none}
+  td.contact a:hover{text-decoration:underline}
+  td.check{text-align:center;white-space:nowrap}
+  td.check input{width:18px;height:18px;cursor:pointer;accent-color:var(--sage)}
+  td.check .date{font-size:11px;color:var(--sage);margin-top:2px}
+  tr.done{background:var(--sage-l)}
+  tr.done:hover{background:#e3eee3}
+  tr.done td.name a{color:#5f8a69}
+  .empty{padding:48px;text-align:center;color:var(--muted)}
+  details summary{cursor:pointer;color:var(--muted);font-size:13px}
+  details ol{margin:8px 0 0;padding-left:20px;line-height:1.9;color:var(--muted);font-size:13px}
+  .chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);margin:0;font-weight:400}
+  .chk input{accent-color:var(--lavender)}
+  #summary{font-weight:500;color:#5d6880}
+</style>
+</head>
+<body>
+<header>
+  <svg class="lily" viewBox="0 0 32 32" aria-hidden="true">
+    <ellipse cx="16" cy="24" rx="14" ry="5" fill="#8fae96" opacity=".7"/>
+    <path d="M16 6c3 4 3 9 0 14-3-5-3-10 0-14z" fill="#e7b9c1"/>
+    <path d="M16 20c-4-2-8-6-9-10 4 0 8 4 9 10z" fill="#d8a9b1"/>
+    <path d="M16 20c4-2 8-6 9-10-4 0-8 4-9 10z" fill="#d8a9b1"/>
+    <circle cx="16" cy="18" r="1.6" fill="#f2d98c"/>
+  </svg>
+  <h1>YouTube チャンネル検索ツール</h1>
+  <span class="sub">キーワード・タグでチャンネルを探す</span>
+</header>
+<main>
+
+<section class="card">
+  <div class="grid">
+    <div style="grid-column:1/-1">
+      <label>YouTube Data API キー（このPCのブラウザにのみ保存されます）</label>
+      <div class="row">
+        <input type="password" id="apiKey" placeholder="AIza..." style="flex:1;min-width:240px">
+        <button id="toggleKey" type="button">表示</button>
+      </div>
+      <details style="margin-top:8px">
+        <summary>APIキーの取得方法</summary>
+        <ol>
+          <li>Google Cloud Console（console.cloud.google.com）でプロジェクトを作成</li>
+          <li>「APIとサービス」→「ライブラリ」→「YouTube Data API v3」を有効化</li>
+          <li>「認証情報」→「認証情報を作成」→「APIキー」を作成し、上の欄に貼り付け</li>
+          <li>無料枠は1日10,000ユニット。検索1ページ（50件）あたり約100ユニット消費</li>
+        </ol>
+      </details>
+    </div>
+
+    <div>
+      <label>キーワード（スペース区切り）</label>
+      <input type="text" id="keywords" placeholder="例：ゲーム実況 スマホゲーム">
+    </div>
+    <div>
+      <label>タグ（カンマ区切り・#は自動付与）</label>
+      <input type="text" id="tags" placeholder="例：VTuber, 原神">
+    </div>
+    <div>
+      <label>検索方法</label>
+      <select id="mode">
+        <option value="channel">チャンネルを直接検索</option>
+        <option value="video">動画からチャンネルを探す（タグ向き）</option>
+      </select>
+    </div>
+    <div>
+      <label>検索時の並び順</label>
+      <select id="order">
+        <option value="relevance">関連度</option>
+        <option value="viewCount">再生回数</option>
+        <option value="date">新しい順</option>
+      </select>
+    </div>
+
+    <div>
+      <label>登録者数 下限</label>
+      <input type="number" id="minSubs" placeholder="例：10000" min="0">
+    </div>
+    <div>
+      <label>登録者数 上限</label>
+      <input type="number" id="maxSubs" placeholder="例：500000" min="0">
+    </div>
+    <div>
+      <label>地域</label>
+      <select id="region">
+        <option value="">指定なし</option>
+        <option value="TW" selected>台湾 TW</option>
+        <option value="HK">香港 HK</option>
+        <option value="SG">シンガポール SG</option>
+        <option value="MY">マレーシア MY</option>
+        <option value="JP">日本 JP</option>
+        <option value="US">アメリカ US</option>
+      </select>
+    </div>
+    <div>
+      <label>言語</label>
+      <select id="lang">
+        <option value="">指定なし</option>
+        <option value="zh-Hant" selected>繁体字中国語</option>
+        <option value="zh-Hans">簡体字中国語</option>
+        <option value="ja">日本語</option>
+        <option value="en">英語</option>
+      </select>
+    </div>
+    <div>
+      <label>検索ページ数（1ページ50件）</label>
+      <select id="pages">
+        <option value="1">1ページ（約100ユニット）</option>
+        <option value="2" selected>2ページ（約200ユニット）</option>
+        <option value="3">3ページ（約300ユニット）</option>
+        <option value="5">5ページ（約500ユニット）</option>
+        <option value="10">10ページ（約1000ユニット）</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:16px;justify-content:space-between">
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="merge"> 現在のリストに追加する</label>
+      <label class="chk"><input type="checkbox" id="excludeHidden" checked> 登録者数非公開のチャンネルを除外</label>
+    </div>
+    <button class="primary" id="searchBtn">検索</button>
+  </div>
+  <div class="status" id="status"></div>
+</section>
+
+<section class="card">
+  <div class="toolbar">
+    <div id="summary">まだ結果はありません</div>
+    <div class="row">
+      <select id="sortSel">
+        <option value="desc">登録者数：多い順</option>
+        <option value="asc">登録者数：少ない順</option>
+      </select>
+      <select id="viewFilter">
+        <option value="all">すべて</option>
+        <option value="todo">未連絡のみ</option>
+        <option value="done">連絡済みのみ</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="onlyContact"> 連絡先ありのみ</label>
+      <button id="csvBtn">CSV出力</button>
+      <button id="clearBtn">リストをクリア</button>
+    </div>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:68px">アイコン</th>
+          <th>チャンネル名</th>
+          <th class="sortable" id="subsHead">登録者数 <span id="arrow">▼</span></th>
+          <th>チャンネル説明</th>
+          <th>連絡先</th>
+          <th style="width:84px;text-align:center">連絡済み</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="6" class="empty">キーワードまたはタグを入力して「検索」を押してください</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const store = {
+    get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+    set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  const K_KEY = 'ytf_apikey', K_DONE = 'ytf_contacted', K_LIST = 'ytf_results', K_FORM = 'ytf_form';
+
+  let contacted = store.get(K_DONE, {});
+  let results = store.get(K_LIST, []);
+  let sortDir = 'desc';
+
+  $('#apiKey').value = store.get(K_KEY, '');
+  const formIds = ['keywords','tags','mode','order','minSubs','maxSubs','region','lang','pages'];
+  const savedForm = store.get(K_FORM, {});
+  formIds.forEach(id => { if (savedForm[id] != null) $('#'+id).value = savedForm[id]; });
+  function saveForm(){ const f = {}; formIds.forEach(id => f[id] = $('#'+id).value); store.set(K_FORM, f); }
+
+  $('#toggleKey').onclick = () => {
+    const i = $('#apiKey'); i.type = i.type === 'password' ? 'text' : 'password';
+    $('#toggleKey').textContent = i.type === 'password' ? '表示' : '隠す';
+  };
+  $('#apiKey').addEventListener('change', () => store.set(K_KEY, $('#apiKey').value.trim()));
+
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = n => Number(n).toLocaleString('ja-JP');
+  function fmtShort(n){
+    n = Number(n);
+    if (n >= 1e8) return (n/1e8).toFixed(2).replace(/\.?0+$/,'') + '億';
+    if (n >= 1e4) return (n/1e4).toFixed(1).replace(/\.0$/,'') + '万';
+    return fmt(n);
+  }
+  function setStatus(msg, err){ const s = $('#status'); s.textContent = msg; s.className = 'status' + (err ? ' err' : ''); }
+
+  async function api(path, params){
+    const url = new URL('https://www.googleapis.com/youtube/v3/' + path);
+    Object.entries(params).forEach(([k,v]) => { if (v !== '' && v != null) url.searchParams.set(k, v); });
+    const r = await fetch(url);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const reason = j.error?.errors?.[0]?.reason || '';
+      if (reason === 'quotaExceeded') throw new Error('本日のAPI割り当てを使い切りました。明日再度お試しいただくか、別のキーをご利用ください。');
+      if (reason === 'keyInvalid' || r.status === 400 && /API key/i.test(j.error?.message||'')) throw new Error('APIキーが無効です。正しくコピーされているか、YouTube Data API v3 が有効になっているかご確認ください。');
+      throw new Error(j.error?.message || ('HTTP ' + r.status));
+    }
+    return j;
+  }
+
+  function extractContacts(desc){
+    desc = desc || '';
+    const uniq = a => [...new Set(a)];
+    const emails = uniq(desc.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/g) || []);
+    let urls = uniq((desc.match(/https?:\/\/[^\s<>()（）「」"'，、]+/g) || []).map(u => u.replace(/[.,;:!?。]+$/,'')));
+    const others = [];
+    const ig = desc.match(/(?:\bIG\b|instagram)\s*[:：@]?\s*@?([A-Za-z0-9._]{2,30})/i);
+    if (ig && !urls.some(u => /instagram\.com/i.test(u))) others.push(['IG', ig[1]]);
+    const line = desc.match(/\bLINE\s*(?:ID)?\s*[:：]\s*@?([A-Za-z0-9._-]{2,30})/i);
+    if (line) others.push(['LINE', line[1]]);
+    const fb = desc.match(/(?:\bFB\b|facebook)\s*[:：]\s*([^\s\n]{2,50})/i);
+    if (fb && !urls.some(u => /facebook\.com|fb\.com/i.test(u))) others.push(['FB', fb[1]]);
+    return { emails, urls: urls.slice(0, 6), others };
+  }
+
+  async function runSearch(){
+    const key = $('#apiKey').value.trim();
+    if (!key) { setStatus('先にAPIキーを入力してください。', true); return; }
+    store.set(K_KEY, key); saveForm();
+
+    const kw = $('#keywords').value.trim();
+    const tags = $('#tags').value.split(/[,，、]/).map(t => t.trim().replace(/^#/, '')).filter(Boolean);
+    const q = [kw, ...tags.map(t => '#' + t)].filter(Boolean).join(' ');
+    if (!q) { setStatus('キーワードまたはタグを入力してください。', true); return; }
+
+    const mode = $('#mode').value;
+    const pages = Number($('#pages').value);
+    const minS = $('#minSubs').value === '' ? 0 : Number($('#minSubs').value);
+    const maxS = $('#maxSubs').value === '' ? Infinity : Number($('#maxSubs').value);
+    if (minS > maxS) { setStatus('下限が上限を超えています。', true); return; }
+
+    $('#searchBtn').disabled = true;
+    let quota = 0;
+    try {
+      const ids = new Set();
+      let pageToken = '';
+      for (let i = 0; i < pages; i++) {
+        setStatus(`検索中… ${i+1} / ${pages} ページ`);
+        const j = await api('search', {
+          part: 'snippet', type: mode, q, maxResults: 50, order: $('#order').value,
+          regionCode: $('#region').value, relevanceLanguage: $('#lang').value, pageToken, key
+        });
+        quota += 100;
+        (j.items || []).forEach(it => {
+          const id = mode === 'channel' ? it.id?.channelId : it.snippet?.channelId;
+          if (id) ids.add(id);
+        });
+        pageToken = j.nextPageToken;
+        if (!pageToken) break;
+      }
+
+      const idList = [...ids];
+      const found = [];
+      for (let i = 0; i < idList.length; i += 50) {
+        setStatus(`チャンネル情報を取得中… ${Math.min(i+50, idList.length)} / ${idList.length}`);
+        const j = await api('channels', { part: 'snippet,statistics', id: idList.slice(i, i+50).join(','), maxResults: 50, key });
+        quota += 1;
+        (j.items || []).forEach(c => {
+          const st = c.statistics || {}, sn = c.snippet || {};
+          found.push({
+            id: c.id,
+            title: sn.title || '',
+            handle: sn.customUrl || '',
+            desc: sn.description || '',
+            thumb: sn.thumbnails?.default?.url || sn.thumbnails?.medium?.url || '',
+            country: sn.country || '',
+            subs: st.hiddenSubscriberCount ? null : Number(st.subscriberCount || 0),
+            videos: Number(st.videoCount || 0),
+            views: Number(st.viewCount || 0)
+          });
+        });
+      }
+
+      const excludeHidden = $('#excludeHidden').checked;
+      const filtered = found.filter(c => {
+        if (c.subs == null) return !excludeHidden && minS === 0 && maxS === Infinity;
+        return c.subs >= minS && c.subs <= maxS;
+      });
+
+      if ($('#merge').checked) {
+        const map = new Map(results.map(r => [r.id, r]));
+        filtered.forEach(r => map.set(r.id, r));
+        results = [...map.values()];
+      } else {
+        results = filtered;
+      }
+      store.set(K_LIST, results);
+      setStatus(`完了：${found.length}件のチャンネルが見つかり、登録者数の条件に合うのは${filtered.length}件です。今回の消費は約${quota}ユニットです。`);
+      render();
+    } catch (e) {
+      setStatus('エラー：' + e.message, true);
+    } finally {
+      $('#searchBtn').disabled = false;
+    }
+  }
+
+  function render(){
+    const view = $('#viewFilter').value;
+    const onlyContact = $('#onlyContact').checked;
+    let rows = results.map(r => ({ ...r, c: extractContacts(r.desc) }));
+    if (view === 'todo') rows = rows.filter(r => !contacted[r.id]);
+    if (view === 'done') rows = rows.filter(r => contacted[r.id]);
+    if (onlyContact) rows = rows.filter(r => r.c.emails.length || r.c.urls.length || r.c.others.length);
+    rows.sort((a, b) => {
+      const x = a.subs ?? -1, y = b.subs ?? -1;
+      return sortDir === 'asc' ? x - y : y - x;
+    });
+
+    const doneCount = results.filter(r => contacted[r.id]).length;
+    $('#summary').textContent = results.length
+      ? `全${results.length}件中 ${rows.length}件を表示｜連絡済み ${doneCount}件`
+      : 'まだ結果はありません';
+    $('#arrow').textContent = sortDir === 'asc' ? '▲' : '▼';
+    $('#sortSel').value = sortDir;
+
+    if (!rows.length) {
+      $('#tbody').innerHTML = `<tr><td colspan="6" class="empty">${results.length ? '現在の絞り込み条件に合うチャンネルはありません' : 'キーワードまたはタグを入力して「検索」を押してください'}</td></tr>`;
+      return;
+    }
+
+    const chUrl = r => r.handle ? `https://www.youtube.com/${encodeURIComponent(r.handle).replace(/%40/,'@')}` : `https://www.youtube.com/channel/${r.id}`;
+    $('#tbody').innerHTML = rows.map(r => {
+      const done = contacted[r.id];
+      const contactHtml = [
+        ...r.c.emails.map(e => `<div><span class="tag">メール</span><a href="mailto:${esc(e)}">${esc(e)}</a></div>`),
+        ...r.c.others.map(([t, v]) => `<div><span class="tag">${esc(t)}</span>${esc(v)}</div>`),
+        ...r.c.urls.map(u => { let h = u; try { h = new URL(u).hostname.replace(/^www\./,''); } catch(e){} return `<div><span class="tag">リンク</span><a href="${esc(u)}" target="_blank" rel="noopener" title="${esc(u)}">${esc(h)}</a></div>`; })
+      ].join('') || '<span class="hint">説明欄に記載なし</span>';
+      return `<tr class="${done ? 'done' : ''}">
+        <td class="avatar">${r.thumb ? `<img src="${esc(r.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</td>
+        <td class="name"><a href="${esc(chUrl(r))}" target="_blank" rel="noopener">${esc(r.title)}</a>
+          <div class="handle">${esc(r.handle)}${r.country ? '・' + esc(r.country) : ''}</div>
+          <div class="handle">動画 ${fmt(r.videos)}本・総再生 ${fmtShort(r.views)}回</div></td>
+        <td class="subs">${r.subs == null ? '<span class="hint">非公開</span>' : fmtShort(r.subs) + `<div class="sub2">${fmt(r.subs)}人</div>`}</td>
+        <td class="desc"><div class="clamp" title="クリックで展開／折りたたみ">${esc(r.desc) || '<span class="hint">（説明なし）</span>'}</div></td>
+        <td class="contact">${contactHtml}</td>
+        <td class="check"><input type="checkbox" data-id="${esc(r.id)}" ${done ? 'checked' : ''}>${done ? `<div class="date">${esc(done)}</div>` : ''}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  $('#searchBtn').onclick = runSearch;
+  ['keywords','tags'].forEach(id => $('#'+id).addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) runSearch(); }));
+  $('#subsHead').onclick = () => { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; render(); };
+  $('#sortSel').onchange = e => { sortDir = e.target.value; render(); };
+  $('#viewFilter').onchange = render;
+  $('#onlyContact').onchange = render;
+
+  $('#tbody').addEventListener('click', e => {
+    const box = e.target.closest('input[type=checkbox][data-id]');
+    if (box) {
+      const id = box.dataset.id;
+      if (box.checked) {
+        const d = new Date();
+        contacted[id] = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+      } else delete contacted[id];
+      store.set(K_DONE, contacted);
+      render();
+      return;
+    }
+    const cl = e.target.closest('.clamp');
+    if (cl) cl.classList.toggle('open');
+  });
+
+  $('#clearBtn').onclick = () => {
+    if (!results.length) return;
+    results = []; store.set(K_LIST, results); setStatus('リストをクリアしました（連絡済みの記録は残ります）。'); render();
+  };
+
+  $('#csvBtn').onclick = () => {
+    if (!results.length) { setStatus('出力できるデータがありません。', true); return; }
+    const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const head = ['チャンネル名','チャンネルURL','ハンドル','登録者数','動画数','総再生回数','国','メール','その他連絡先','リンク','連絡済み','連絡日','チャンネル説明'];
+    const sorted = [...results].sort((a,b) => sortDir === 'asc' ? (a.subs??-1)-(b.subs??-1) : (b.subs??-1)-(a.subs??-1));
+    const lines = sorted.map(r => {
+      const c = extractContacts(r.desc);
+      return [r.title, `https://www.youtube.com/channel/${r.id}`, r.handle, r.subs ?? '非公開', r.videos, r.views, r.country,
+        c.emails.join(' '), c.others.map(([t,v]) => t + ':' + v).join(' '), c.urls.join(' '),
+        contacted[r.id] ? '済' : '', contacted[r.id] || '', r.desc].map(q).join(',');
+    });
+    const blob = new Blob(['﻿' + [head.map(q).join(','), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const d = new Date();
+    a.download = `youtube_channels_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
