@@ -65,7 +65,12 @@
   td.name .handle{font-size:12px;color:var(--muted);margin-top:2px}
   td.subs{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700;color:var(--water-d)}
   td.subs .sub2{font-size:12px;color:var(--muted);font-weight:400}
-  td.desc{max-width:380px;color:#4c5668}
+  td.desc{max-width:340px;color:#4c5668}
+  td.created,td.live{white-space:nowrap;font-variant-numeric:tabular-nums}
+  td.live b{color:var(--water-d)}
+  td.live .sub2,td.created .sub2{font-size:12px;color:var(--muted)}
+  a.pill{display:inline-block;font-size:12px;padding:3px 10px;border-radius:999px;background:var(--mist);color:var(--water-d);text-decoration:none;white-space:nowrap}
+  a.pill:hover{background:#e2e7f2}
   .clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;cursor:pointer}
   .clamp.open{-webkit-line-clamp:unset}
   td.contact{max-width:240px;font-size:13px;word-break:break-all}
@@ -125,8 +130,8 @@
       <input type="text" id="keywords" placeholder="例：ゲーム実況 スマホゲーム">
     </div>
     <div>
-      <label>タグ（カンマ区切り・#は自動付与）</label>
-      <input type="text" id="tags" placeholder="例：VTuber, 原神">
+      <label>タグ・関連語（カンマ区切りでそれぞれ検索して合算）</label>
+      <input type="text" id="tags" placeholder="例：VTuber, 個人勢, Vtuber準備中">
     </div>
     <div>
       <label>検索方法</label>
@@ -175,21 +180,34 @@
       </select>
     </div>
     <div>
-      <label>検索ページ数（1ページ50件）</label>
-      <select id="pages">
-        <option value="1">1ページ（約100ユニット）</option>
-        <option value="2" selected>2ページ（約200ユニット）</option>
+      <label>目標件数（条件に合うチャンネル）</label>
+      <select id="target">
+        <option value="20">20件</option>
+        <option value="50" selected>50件</option>
+        <option value="100">100件</option>
+        <option value="200">200件</option>
+      </select>
+    </div>
+    <div>
+      <label>最大検索ページ数（1ページ＝約100ユニット）</label>
+      <select id="maxPages">
         <option value="3">3ページ（約300ユニット）</option>
         <option value="5">5ページ（約500ユニット）</option>
-        <option value="10">10ページ（約1000ユニット）</option>
+        <option value="10" selected>10ページ（約1,000ユニット）</option>
+        <option value="20">20ページ（約2,000ユニット）</option>
+        <option value="40">40ページ（約4,000ユニット）</option>
       </select>
     </div>
   </div>
+  <div class="hint" style="margin-top:8px">目標件数に達するまで自動で次のページを検索し、最大ページ数に達したら止まります。</div>
 
   <div class="row" style="margin-top:16px;justify-content:space-between">
     <div class="row">
-      <label class="chk"><input type="checkbox" id="merge"> 現在のリストに追加する</label>
-      <label class="chk"><input type="checkbox" id="excludeHidden" checked> 登録者数非公開のチャンネルを除外</label>
+      <label class="chk"><input type="checkbox" id="strictMatch" checked> チャンネル名・説明に検索語を含むものだけ</label>
+      <label class="chk"><input type="checkbox" id="countryMatch" checked> 国が別の国に設定されたチャンネルを除外</label>
+      <label class="chk"><input type="checkbox" id="excludeHidden" checked> 登録者数非公開を除外</label>
+      <label class="chk"><input type="checkbox" id="merge"> 現在のリストに追加</label>
+      <label class="chk"><input type="checkbox" id="liveStats" checked> ライブ平均再生数も取得（1件あたり約2〜6ユニット）</label>
     </div>
     <button class="primary" id="searchBtn">検索</button>
   </div>
@@ -201,8 +219,12 @@
     <div id="summary">まだ結果はありません</div>
     <div class="row">
       <select id="sortSel">
-        <option value="desc">登録者数：多い順</option>
-        <option value="asc">登録者数：少ない順</option>
+        <option value="subs-desc">登録者数：多い順</option>
+        <option value="subs-asc">登録者数：少ない順</option>
+        <option value="live-desc">ライブ平均再生：多い順</option>
+        <option value="live-asc">ライブ平均再生：少ない順</option>
+        <option value="created-desc">設立日：新しい順</option>
+        <option value="created-asc">設立日：古い順</option>
       </select>
       <select id="viewFilter">
         <option value="all">すべて</option>
@@ -220,13 +242,16 @@
         <tr>
           <th style="width:68px">アイコン</th>
           <th>チャンネル名</th>
-          <th class="sortable" id="subsHead">登録者数 <span id="arrow">▼</span></th>
+          <th class="sortable" data-key="subs">登録者数 <span class="arrow"></span></th>
+          <th class="sortable" data-key="created">設立日 <span class="arrow"></span></th>
+          <th class="sortable" data-key="live">ライブ平均再生<br><span style="font-weight:400">直近10本</span> <span class="arrow"></span></th>
           <th>チャンネル説明</th>
           <th>連絡先</th>
+          <th>スパチャ</th>
           <th style="width:84px;text-align:center">連絡済み</th>
         </tr>
       </thead>
-      <tbody id="tbody"><tr><td colspan="6" class="empty">キーワードまたはタグを入力して「検索」を押してください</td></tr></tbody>
+      <tbody id="tbody"><tr><td colspan="9" class="empty">キーワードまたはタグを入力して「検索」を押してください</td></tr></tbody>
     </table>
   </div>
 </section>
@@ -243,10 +268,10 @@
 
   let contacted = store.get(K_DONE, {});
   let results = store.get(K_LIST, []);
-  let sortDir = 'desc';
+  let sortKey = 'subs', sortDir = 'desc';
 
   $('#apiKey').value = store.get(K_KEY, '');
-  const formIds = ['keywords','tags','mode','order','minSubs','maxSubs','region','lang','pages'];
+  const formIds = ['keywords','tags','mode','order','minSubs','maxSubs','region','lang','target','maxPages'];
   const savedForm = store.get(K_FORM, {});
   formIds.forEach(id => { if (savedForm[id] != null) $('#'+id).value = savedForm[id]; });
   function saveForm(){ const f = {}; formIds.forEach(id => f[id] = $('#'+id).value); store.set(K_FORM, f); }
@@ -296,6 +321,34 @@
     return { emails, urls: urls.slice(0, 6), others };
   }
 
+  // 直近の完了済みライブ（最大10本）の平均再生数。アップロード一覧を新しい順に最大150本まで確認
+  async function fetchLiveStats(ch, key){
+    let units = 0, token = '', checked = 0;
+    const lives = [];
+    if (!ch.uploads) { ch.liveAvg = null; ch.liveCount = 0; return 0; }
+    while (lives.length < 10 && checked < 150) {
+      const pl = await api('playlistItems', { part: 'contentDetails', playlistId: ch.uploads, maxResults: 50, pageToken: token, key });
+      units += 1;
+      const ids = (pl.items || []).map(it => it.contentDetails?.videoId).filter(Boolean);
+      checked += ids.length;
+      if (!ids.length) break;
+      const vj = await api('videos', { part: 'liveStreamingDetails,statistics', id: ids.join(','), maxResults: 50, key });
+      units += 1;
+      (vj.items || []).forEach(v => {
+        const ld = v.liveStreamingDetails;
+        if (ld && ld.actualEndTime) lives.push({ start: ld.actualStartTime || ld.actualEndTime, views: Number(v.statistics?.viewCount || 0) });
+      });
+      token = pl.nextPageToken || '';
+      if (!token) break;
+    }
+    lives.sort((a, b) => b.start.localeCompare(a.start));
+    const top = lives.slice(0, 10);
+    ch.liveCount = top.length;
+    ch.liveAvg = top.length ? Math.round(top.reduce((s, v) => s + v.views, 0) / top.length) : null;
+    ch.lastLive = top[0]?.start || '';
+    return units;
+  }
+
   async function runSearch(){
     const key = $('#apiKey').value.trim();
     if (!key) { setStatus('先にAPIキーを入力してください。', true); return; }
@@ -303,79 +356,131 @@
 
     const kw = $('#keywords').value.trim();
     const tags = $('#tags').value.split(/[,，、]/).map(t => t.trim().replace(/^#/, '')).filter(Boolean);
-    const q = [kw, ...tags.map(t => '#' + t)].filter(Boolean).join(' ');
-    if (!q) { setStatus('キーワードまたはタグを入力してください。', true); return; }
+    if (!kw && !tags.length) { setStatus('キーワードまたはタグを入力してください。', true); return; }
 
     const mode = $('#mode').value;
-    const pages = Number($('#pages').value);
+    // タグはそれぞれ別の検索として実行（OR）。動画検索のときだけ # を付ける
+    const queries = tags.length
+      ? tags.map(t => [kw, mode === 'video' ? '#' + t : t].filter(Boolean).join(' '))
+      : [kw];
+    // 名前・説明の一致判定に使う語
+    const kwTerms = kw.split(/\s+/).filter(Boolean).map(t => t.toLowerCase());
+    const tagTerms = tags.map(t => t.toLowerCase());
+
+    const target = Number($('#target').value);
+    const maxPages = Number($('#maxPages').value);
     const minS = $('#minSubs').value === '' ? 0 : Number($('#minSubs').value);
     const maxS = $('#maxSubs').value === '' ? Infinity : Number($('#maxSubs').value);
     if (minS > maxS) { setStatus('下限が上限を超えています。', true); return; }
+    const region = $('#region').value;
+    const strict = $('#strictMatch').checked;
+    const countryMatch = $('#countryMatch').checked;
+    const excludeHidden = $('#excludeHidden').checked;
+
+    const isMatch = c => {
+      if (c.subs == null) { if (excludeHidden || minS > 0 || maxS !== Infinity) return false; }
+      else if (c.subs < minS || c.subs > maxS) return false;
+      if (countryMatch && region && c.country && c.country !== region) return false;
+      if (strict) {
+        const text = (c.title + ' ' + c.handle + ' ' + c.desc).toLowerCase();
+        const kwOk = kwTerms.every(t => text.includes(t));
+        const tagOk = !tagTerms.length || tagTerms.some(t => text.includes(t));
+        if (!kwOk || !tagOk) return false;
+      }
+      return true;
+    };
 
     $('#searchBtn').disabled = true;
-    let quota = 0;
+    let quota = 0, pagesUsed = 0;
+    const seen = new Set();
+    const matched = [];
+    let scanned = 0;
+    const state = queries.map(q => ({ q, token: '', done: false }));
+
     try {
-      const ids = new Set();
-      let pageToken = '';
-      for (let i = 0; i < pages; i++) {
-        setStatus(`検索中… ${i+1} / ${pages} ページ`);
-        const j = await api('search', {
-          part: 'snippet', type: mode, q, maxResults: 50, order: $('#order').value,
-          regionCode: $('#region').value, relevanceLanguage: $('#lang').value, pageToken, key
-        });
-        quota += 100;
-        (j.items || []).forEach(it => {
-          const id = mode === 'channel' ? it.id?.channelId : it.snippet?.channelId;
-          if (id) ids.add(id);
-        });
-        pageToken = j.nextPageToken;
-        if (!pageToken) break;
-      }
-
-      const idList = [...ids];
-      const found = [];
-      for (let i = 0; i < idList.length; i += 50) {
-        setStatus(`チャンネル情報を取得中… ${Math.min(i+50, idList.length)} / ${idList.length}`);
-        const j = await api('channels', { part: 'snippet,statistics', id: idList.slice(i, i+50).join(','), maxResults: 50, key });
-        quota += 1;
-        (j.items || []).forEach(c => {
-          const st = c.statistics || {}, sn = c.snippet || {};
-          found.push({
-            id: c.id,
-            title: sn.title || '',
-            handle: sn.customUrl || '',
-            desc: sn.description || '',
-            thumb: sn.thumbnails?.default?.url || sn.thumbnails?.medium?.url || '',
-            country: sn.country || '',
-            subs: st.hiddenSubscriberCount ? null : Number(st.subscriberCount || 0),
-            videos: Number(st.videoCount || 0),
-            views: Number(st.viewCount || 0)
+      while (pagesUsed < maxPages && matched.length < target && state.some(s => !s.done)) {
+        for (const st of state) {
+          if (st.done || pagesUsed >= maxPages || matched.length >= target) continue;
+          pagesUsed++;
+          setStatus(`検索中…「${st.q}」 ${pagesUsed} / 最大${maxPages}ページ｜条件に合うチャンネル ${matched.length}件`);
+          const j = await api('search', {
+            part: 'snippet', type: mode, q: st.q, maxResults: 50, order: $('#order').value,
+            regionCode: region, relevanceLanguage: $('#lang').value, pageToken: st.token, key
           });
-        });
+          quota += 100;
+          st.token = j.nextPageToken || '';
+          if (!st.token) st.done = true;
+
+          const newIds = [];
+          (j.items || []).forEach(it => {
+            const id = mode === 'channel' ? it.id?.channelId : it.snippet?.channelId;
+            if (id && !seen.has(id)) { seen.add(id); newIds.push(id); }
+          });
+          for (let i = 0; i < newIds.length; i += 50) {
+            const cj = await api('channels', { part: 'snippet,statistics,contentDetails', id: newIds.slice(i, i+50).join(','), maxResults: 50, key });
+            quota += 1;
+            (cj.items || []).forEach(c => {
+              const s2 = c.statistics || {}, sn = c.snippet || {};
+              const ch = {
+                id: c.id,
+                title: sn.title || '',
+                handle: sn.customUrl || '',
+                desc: sn.description || '',
+                thumb: sn.thumbnails?.default?.url || sn.thumbnails?.medium?.url || '',
+                country: sn.country || '',
+                subs: s2.hiddenSubscriberCount ? null : Number(s2.subscriberCount || 0),
+                videos: Number(s2.videoCount || 0),
+                views: Number(s2.viewCount || 0),
+                created: sn.publishedAt || '',
+                uploads: c.contentDetails?.relatedPlaylists?.uploads || ''
+              };
+              scanned++;
+              if (isMatch(ch)) matched.push(ch);
+            });
+          }
+        }
       }
 
-      const excludeHidden = $('#excludeHidden').checked;
-      const filtered = found.filter(c => {
-        if (c.subs == null) return !excludeHidden && minS === 0 && maxS === Infinity;
-        return c.subs >= minS && c.subs <= maxS;
-      });
+      if ($('#liveStats').checked && matched.length) {
+        let done = 0;
+        const queue = [...matched];
+        const worker = async () => {
+          while (queue.length) {
+            const ch = queue.shift();
+            try { quota += await fetchLiveStats(ch, key); } catch (e) { if (/割り当て/.test(e.message)) throw e; ch.liveAvg = null; ch.liveCount = 0; }
+            done++;
+            setStatus(`ライブ統計を取得中… ${done} / ${matched.length}`);
+          }
+        };
+        await Promise.all([worker(), worker(), worker(), worker()]);
+      }
 
       if ($('#merge').checked) {
         const map = new Map(results.map(r => [r.id, r]));
-        filtered.forEach(r => map.set(r.id, r));
+        matched.forEach(r => map.set(r.id, r));
         results = [...map.values()];
       } else {
-        results = filtered;
+        results = matched;
       }
       store.set(K_LIST, results);
-      setStatus(`完了：${found.length}件のチャンネルが見つかり、登録者数の条件に合うのは${filtered.length}件です。今回の消費は約${quota}ユニットです。`);
+      const why = matched.length >= target ? '目標件数に達しました'
+        : state.every(s => s.done) ? 'YouTube側の検索結果が尽きました。関連語を増やすか、条件を広げてみてください'
+        : '最大ページ数に達しました。ページ数を増やすと、さらに見つかる可能性があります';
+      setStatus(`完了：${scanned}件のチャンネルを確認し、条件に合うのは${matched.length}件（${why}）。今回の消費は約${quota}ユニットです。`);
       render();
     } catch (e) {
-      setStatus('エラー：' + e.message, true);
+      setStatus('エラー：' + e.message + (matched.length ? `（取得済みの${matched.length}件は表示します）` : ''), true);
+      if (matched.length) { results = $('#merge').checked ? [...new Map([...results, ...matched].map(r => [r.id, r])).values()] : matched; store.set(K_LIST, results); render(); }
     } finally {
       $('#searchBtn').disabled = false;
     }
   }
+
+  const sortVal = r => sortKey === 'live' ? (r.liveAvg ?? -1)
+    : sortKey === 'created' ? (r.created ? Date.parse(r.created) : -1)
+    : (r.subs ?? -1);
+  const cmp = (a, b) => sortDir === 'asc' ? sortVal(a) - sortVal(b) : sortVal(b) - sortVal(a);
+  const fmtDate = iso => { if (!iso) return ''; const d = new Date(iso); return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`; };
 
   function render(){
     const view = $('#viewFilter').value;
@@ -384,20 +489,19 @@
     if (view === 'todo') rows = rows.filter(r => !contacted[r.id]);
     if (view === 'done') rows = rows.filter(r => contacted[r.id]);
     if (onlyContact) rows = rows.filter(r => r.c.emails.length || r.c.urls.length || r.c.others.length);
-    rows.sort((a, b) => {
-      const x = a.subs ?? -1, y = b.subs ?? -1;
-      return sortDir === 'asc' ? x - y : y - x;
-    });
+    rows.sort(cmp);
 
     const doneCount = results.filter(r => contacted[r.id]).length;
     $('#summary').textContent = results.length
       ? `全${results.length}件中 ${rows.length}件を表示｜連絡済み ${doneCount}件`
       : 'まだ結果はありません';
-    $('#arrow').textContent = sortDir === 'asc' ? '▲' : '▼';
-    $('#sortSel').value = sortDir;
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.querySelector('.arrow').textContent = th.dataset.key === sortKey ? (sortDir === 'asc' ? '▲' : '▼') : '';
+    });
+    $('#sortSel').value = sortKey + '-' + sortDir;
 
     if (!rows.length) {
-      $('#tbody').innerHTML = `<tr><td colspan="6" class="empty">${results.length ? '現在の絞り込み条件に合うチャンネルはありません' : 'キーワードまたはタグを入力して「検索」を押してください'}</td></tr>`;
+      $('#tbody').innerHTML = `<tr><td colspan="9" class="empty">${results.length ? '現在の絞り込み条件に合うチャンネルはありません' : 'キーワードまたはタグを入力して「検索」を押してください'}</td></tr>`;
       return;
     }
 
@@ -415,8 +519,11 @@
           <div class="handle">${esc(r.handle)}${r.country ? '・' + esc(r.country) : ''}</div>
           <div class="handle">動画 ${fmt(r.videos)}本・総再生 ${fmtShort(r.views)}回</div></td>
         <td class="subs">${r.subs == null ? '<span class="hint">非公開</span>' : fmtShort(r.subs) + `<div class="sub2">${fmt(r.subs)}人</div>`}</td>
+        <td class="created">${r.created ? fmtDate(r.created) + `<div class="sub2">${Math.max(0, Math.floor((Date.now() - Date.parse(r.created)) / 31557600000))}年目</div>` : '<span class="hint">—</span>'}</td>
+        <td class="live">${r.liveAvg != null ? `<b>${fmtShort(r.liveAvg)}回</b><div class="sub2">${r.liveCount}本の平均</div><div class="sub2">最終 ${fmtDate(r.lastLive)}</div>` : (r.liveCount === 0 ? '<span class="hint">ライブなし</span>' : '<span class="hint">—</span>')}</td>
         <td class="desc"><div class="clamp" title="クリックで展開／折りたたみ">${esc(r.desc) || '<span class="hint">（説明なし）</span>'}</div></td>
         <td class="contact">${contactHtml}</td>
+        <td><a class="pill" href="https://playboard.co/en/channel/${esc(r.id)}" target="_blank" rel="noopener">Playboardで確認</a></td>
         <td class="check"><input type="checkbox" data-id="${esc(r.id)}" ${done ? 'checked' : ''}>${done ? `<div class="date">${esc(done)}</div>` : ''}</td>
       </tr>`;
     }).join('');
@@ -424,8 +531,12 @@
 
   $('#searchBtn').onclick = runSearch;
   ['keywords','tags'].forEach(id => $('#'+id).addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) runSearch(); }));
-  $('#subsHead').onclick = () => { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; render(); };
-  $('#sortSel').onchange = e => { sortDir = e.target.value; render(); };
+  document.querySelectorAll('th.sortable').forEach(th => th.onclick = () => {
+    if (sortKey === th.dataset.key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortKey = th.dataset.key; sortDir = 'desc'; }
+    render();
+  });
+  $('#sortSel').onchange = e => { [sortKey, sortDir] = e.target.value.split('-'); render(); };
   $('#viewFilter').onchange = render;
   $('#onlyContact').onchange = render;
 
@@ -453,11 +564,11 @@
   $('#csvBtn').onclick = () => {
     if (!results.length) { setStatus('出力できるデータがありません。', true); return; }
     const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-    const head = ['チャンネル名','チャンネルURL','ハンドル','登録者数','動画数','総再生回数','国','メール','その他連絡先','リンク','連絡済み','連絡日','チャンネル説明'];
-    const sorted = [...results].sort((a,b) => sortDir === 'asc' ? (a.subs??-1)-(b.subs??-1) : (b.subs??-1)-(a.subs??-1));
+    const head = ['チャンネル名','チャンネルURL','ハンドル','登録者数','設立日','ライブ平均再生（直近10本）','集計ライブ本数','最終ライブ日','動画数','総再生回数','国','メール','その他連絡先','リンク','連絡済み','連絡日','チャンネル説明'];
+    const sorted = [...results].sort(cmp);
     const lines = sorted.map(r => {
       const c = extractContacts(r.desc);
-      return [r.title, `https://www.youtube.com/channel/${r.id}`, r.handle, r.subs ?? '非公開', r.videos, r.views, r.country,
+      return [r.title, `https://www.youtube.com/channel/${r.id}`, r.handle, r.subs ?? '非公開', fmtDate(r.created), r.liveAvg ?? '', r.liveCount ?? '', fmtDate(r.lastLive), r.videos, r.views, r.country,
         c.emails.join(' '), c.others.map(([t,v]) => t + ':' + v).join(' '), c.urls.join(' '),
         contacted[r.id] ? '済' : '', contacted[r.id] || '', r.desc].map(q).join(',');
     });
